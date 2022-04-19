@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <title>Calendar</title>
+    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="//code.jquery.com/ui/1.13.1/themes/base/jquery-ui.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://code.jquery.com/ui/1.13.1/jquery-ui.min.js"
+        integrity="sha256-eTyxS0rkjpLEo16uXTS0uVCS4815lc40K2iVpWDvdSY=" crossorigin="anonymous"></script>
+
+
+</head>
+
+<body>
+    <div class="parent">
+        <div class="left">
+            <div id="login_form">
+                <input type="text" id="username" placeholder="Username" autocomplete="on" />
+                <input type="password" id="password" placeholder="Password" autocomplete="on" />
+                <button id="login_btn">Log In</button>
+            </div>
+            <div id="register_form">
+                <input type="text" id="new_username" placeholder="New Username" autocomplete="on" />
+                <input type="password" id="new_password" placeholder="New Password" autocomplete="on" />
+                <button id="register_btn">Register</button>
+            </div>
+            <button id="logout_btn">Log Out</button>
+
+            <div id="calendar_header">
+                <button id="today_btn">Today</button>
+                <button id="prev_month_btn">
+                    < </button>
+                        <button id="next_month_btn">></button>
+                        <div id="month_display">March 2022</div>
+            </div>
+            <div id="calendar_main">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Sun</th>
+                            <th>Mon</th>
+                            <th>Tues</th>
+                            <th>Wed</th>
+                            <th>Thu</th>
+                            <th>Fri</th>
+                            <th>Sat</th>
+                        </tr>
+                    </thead>
+                    <tbody id="calendar_body">
+
+                    </tbody>
+                </table>
+            </div>
+            <div id="categories">
+                <input type="text" name="new_cat" id="new_cat" placeholder="New Category" required />
+                <input type="submit" id="add_cat_btn" value="Add New Category">
+            </div>
+        </div>
+        <div class="right">
+            <div id="event_popup">
+                <input type="submit" name="cancel_btn" value="Cancel" id="cancel_btn">
+                <br>
+                <label for="title">Title: </label>
+                <input type="text" name="title" id="title" required />
+                <br>
+                <label for="date">Date: </label>
+                <input type="date" name="date" id="date" required />
+                <br>
+                <label for="time">Time: </label>
+                <input type="time" name="time" id="time" required />
+                <br>
+                <label for="event_categories">Category:</label>
+                <select name="event_categories" id="event_categories"></select>
+                <br>
+                <label for="description">Description: </label>
+                <textarea name="description" id="description"></textarea>
+                <br>
+                <input type="submit" name="save_btn" value="Add Event" id="save_btn">
+                <input type="submit" name="save_changes_btn" value="Save Changes" id="save_changes_btn">
+                <input type="submit" name="delete_event_btn" value="Delete Event" id="delete_event_btn">
+                <input type="hidden" id="event_id">
+            </div>
+        </div>
+    </div>
+
+
+
+    <div id="share">
+        <input type="text" name="new_share" id="new_share" placeholder="Username to share with" required />
+        <input type="submit" id="add_share_btn" value="Share Calendar">
+    </div>
+
+
+    <div id="show_more" title="Other Events">
+    </div>
+
+
+    <script src="ajax.js"></script>
+    <script src="helperFunctions.js"></script>
+    <script src="display.js"></script>
+
+
+
+</body>
+
+</html>

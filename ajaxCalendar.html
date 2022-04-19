@@ -1,0 +1,852 @@
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calendar</title>
+    <link rel="stylesheet" href="style.css"/>
+    <!-- http://classes.engineering.wustl.edu/cse330/content/calendar.js -->
+    <script type="text/javascript" src="calendar.js"></script>
+    
+    
+</head>
+<body>
+    <!-- User Management -->
+    <ul></ul>
+
+    <!-- Calendar -->
+    <div class="calendar" id="calendar"></div>
+
+    <script>
+        /**************************************************\
+         *                                                 *
+         * render HTML for login & registration & calendar *
+         *                                                 *
+        \ *************************************************/
+        
+        // Login & registration
+        renderLogin();
+
+        // HTML Calendar
+        loadCalendar();
+
+        /*******************************************************\
+         *                                                     *
+         * User Management:                                    *
+         *      Login: user login to view, add, delete events  *
+         *          login --> session alive --> checksession   *
+         * checksession --> if session alive, no need to login *
+         *          Add, View, Delete Events                   *
+         *              --> if not alive, just login           *
+         *      Register: people can register no matter login  *
+         *                                                     *
+         *                                                     *
+        \ ******************************************************/
+        
+        // register no matter if the user is logged in or not
+        document.getElementById("register").addEventListener("click", registerAjax, false);
+
+        // if the user is not logout, session still alive
+        // if true: session alive
+        // the user is logged in right now
+        // user can manage their events
+        checkSessionStatus();
+
+        // if false: session expired
+        // login in again --> start session --> check session status again
+        document.getElementById("login").addEventListener("click", loginAjax, false);
+
+        // if session expired, user can login
+        function loginAjax(event){
+            const usernameSele = document.querySelector("#username");
+            const passwordSele = document.querySelector("#password");
+
+            const username = usernameSele.value;
+            const password = passwordSele.value;
+
+            // make a url-encoded string for passing post data:
+            const data = {"username":username, "password":password};
+
+            $.ajax({
+                url: "loginAjax.php",
+                data: JSON.stringify(data),
+                type: "POST",
+                dataType: "json",
+            })
+            // sucess -> session alive or expired
+            .done(function(jsonData){
+                if (jsonData.success){
+                    console.log("You've been logged in!");
+                    checkSessionStatus();
+                }else{
+                    console.log(`You were not logged in ${jsonData.message}`);
+                }
+            })
+            // fail -> error
+            .fail(function(xhr,status,error){
+                console.log("error: "+ error);
+                console.log("status: "+ status);
+                console.dir( xhr );
+            })
+            // no matter success or fails
+            .always(function(){
+                console.log("login process completed");
+            });
+        }
+
+        // keep check session in the server
+        function checkSessionStatus(){
+            $.ajax({
+                url: "sessionAliveAjax.php",
+                type: "POST",
+                dataType: "json",
+            })
+            // sucess -> session alive or expired
+            .done(function(jsonData){
+                if (jsonData.success){
+                    console.log("login successful");
+                    // show user their have been logged in
+                    $("<p>Click Specific Date on Calendar to Add Event</p>").insertAfter("ul");
+                    $("ul li:first").html("<span> Welcome to your calendar <button id='logout'>Log out</button> <button id='event-mgt'>Manage Events</button></span>");
+                    $("ul li:first").append("<button id='groupEvent'>Group Event</button>");
+                    $("ul li:first").append("<button id='shareCalendar'>Share Calendar</button>")
+                    // select all calendar to set event listeners
+                    $("#groupEvent").on("click",groupEvent);
+                    $("#calendarTB").on("click", "td", addEvents);
+                    $("#logout").on("click", logout);
+                    $("#event-mgt").on("click", mgtEvents);
+                    $("#shareCalendar").on("click", shareCalendar);
+                }else{
+                    console.log("login failed");
+                }
+            })
+            // fail -> error
+            .fail(function(xhr,status,error){
+                console.log("error: "+ error);
+                console.log("status: "+ status);
+                console.dir( xhr );
+            })
+            // no matter success or fails
+            .always(function(){
+                console.log("check session completed");
+            });
+        }
+        
+        // render login and registration html
+        function renderLogin(){
+            const ulSele = document.querySelector("ul");
+            const liLogin = document.createElement("li");
+            const liRegister = document.createElement("li");
+
+            // username input
+            const inputUser = document.createElement("input");
+            inputUser.setAttribute("type", "text");
+            inputUser.setAttribute("class","login");
+            inputUser.setAttribute("name","username");
+            inputUser.setAttribute("id","username");
+            inputUser.setAttribute("placeholder","username");
+            inputUser.setAttribute("required","true");
+
+            // password input
+            const inputPassword = document.createElement("input");
+            inputPassword.setAttribute("type", "text");
+            inputPassword.setAttribute("class", "login");
+            inputPassword.setAttribute("name","password");
+            inputPassword.setAttribute("id","password");
+            inputPassword.setAttribute("placeholder","password");
+            inputPassword.setAttribute("required","true");
+
+            // submit button
+            const inputSubmit = document.createElement("input");
+            inputSubmit.setAttribute("type", "submit");
+            inputSubmit.setAttribute("class", "login");
+            inputSubmit.setAttribute("name","login");
+            inputSubmit.setAttribute("id","login");
+            inputSubmit.setAttribute("value","Log in");
+
+            // register name
+            const regName = document.createElement("input");
+            regName.setAttribute("type", "text");
+            regName.setAttribute("class","register");
+            regName.setAttribute("name","newName");
+            regName.setAttribute("id","newName");
+            regName.setAttribute("placeholder","Register Name");
+            regName.setAttribute("required","true");
+
+            // register password
+            const regPassword = document.createElement("input");
+            regPassword.setAttribute("type", "text");
+            regPassword.setAttribute("class","register");
+            regPassword.setAttribute("name","newPswd");
+            regPassword.setAttribute("id","newPswd");
+            regPassword.setAttribute("placeholder","Register Password");
+            regPassword.setAttribute("required","true");
+            
+            const regEmail = document.createElement("input");
+            regEmail.setAttribute("type", "text");
+            regEmail.setAttribute("class","register");
+            regEmail.setAttribute("name","newEmail");
+            regEmail.setAttribute("id","newEmail");
+            regEmail.setAttribute("placeholder","Register Email");
+            regEmail.setAttribute("required", "true");
+
+            const regSubmit = document.createElement("input");
+            regSubmit.setAttribute("type", "submit");
+            regSubmit.setAttribute("class", "register");
+            regSubmit.setAttribute("name", "register");
+            regSubmit.setAttribute("id", "register");
+            regSubmit.setAttribute("value", "Register");
+
+            const logintxt = document.createElement("span");
+            logintxt.textContent = "Login: ";
+            liLogin.appendChild(logintxt);
+            liLogin.appendChild(inputUser);
+            liLogin.appendChild(inputPassword);
+            liLogin.appendChild(inputSubmit);
+
+            const registertxt = document.createElement("span");
+            registertxt.textContent = "Register New User: ";
+            liRegister.appendChild(registertxt);
+            liRegister.appendChild(regName);
+            liRegister.appendChild(regPassword);
+            liRegister.appendChild(regEmail);
+            liRegister.appendChild(regSubmit);
+            
+            ulSele.appendChild(liLogin);
+            ulSele.appendChild(liRegister);
+        }
+        
+        // registration button
+        function registerAjax(event) {
+            const newUserSele = document.querySelector("#newName");
+            const newPswdSele = document.querySelector("#newPswd");
+            const newEmailSele = document.querySelector("#newEmail");
+
+            const newUser = newUserSele.value;
+            const newPswd = newPswdSele.value;
+            const newEmail = newEmailSele.value;
+
+            // make a url-encoded string for passing post data;
+            const data = {"newName": newUser, "newPswd": newPswd, "newEmail": newEmail};
+
+            // use fetch to access data
+            fetch("registerAjax.php", {
+                method: "POST",
+                body: JSON.stringify(data),
+                headers: {"content-type": "application/json"}
+                })
+                .then(response => response.json())
+                .then(data => console.log(data.success ? "You have successfully registered!" : `You did not registered ${data.message}`))
+                .catch(error => console.log(error));
+                // .then(response => response.text())
+                // .then(text => console.log(text));
+
+            // register, then remove the input field
+            newUserSele.value = "";
+            newPswdSele.value = "";
+            newEmailSele.value = "";
+        }
+
+        // logout button: recover the html page
+        // clear event management functions
+        function logout(event){
+            // $("#logout").
+            $.ajax({
+                url: "logout.php",
+                type: "POST",
+            })
+            // sucess -> session alive or expired
+            .done(function(){
+                console.log("log out successful");
+                $("ul li:first").html("");
+                // create input
+                let spanLogin = $("<span>Login: </span>");
+                spanLogin.appendTo("ul li:first");
+                let usernameLogin = $("<input/>",{
+                    type: "text",
+                    class: "login",
+                    name: "username",
+                    id: "username",
+                    placeholder: "username",
+                    required: "true"
+                });
+                usernameLogin.appendTo("ul li:first");
+                let passwordLogin = $("<input/>",{
+                    type: "text",
+                    class: "login",
+                    name: "password",
+                    id: "password",
+                    placeholder: "password",
+                    required: "true"
+                });
+                passwordLogin.appendTo("ul li:first");
+                let inputSubmit = $("<input/>",{
+                    type: "submit",
+                    class: "login",
+                    name: "login",
+                    id: "login",
+                    value: "Log in"
+                });
+                inputSubmit.appendTo("ul li:first");
+                $("#calendarTB").off("click", "td", addEvents);
+                $("#event-mgt").off("click", mgtEvents);
+                $("#login").on("click", loginAjax);
+                $("#shareCalendar").off("click", shareCalendar);
+                $("p").remove();
+            })
+            // fail -> error
+            .fail(function(xhr,status,error){
+                console.log("error: "+ error);
+                console.log("status: "+ status);
+                console.dir( xhr );
+            })
+            // no matter success or fails
+            .always(function(){
+                console.log("destroy session completed");
+            });
+        }
+
+        /**********************\
+        *                      *
+        * load the calendar    *
+        *                      *
+        ***********************/
+
+        function loadCalendar(){
+            // current date
+            let currentDate = new Date();
+            // current year
+            let _year = currentDate.getFullYear();
+            // current month
+            let _month = currentDate.getMonth();
+            
+            // For our purposes, we can keep the current month in a variable in the global scope
+            let currentMonth = new Month(_year, _month);
+
+            // load the html content of calendar
+            renderHTML();
+
+            // load current month data
+            const curMth = document.querySelector("#header");
+            // show current month
+            updateCurrentMonth();
+
+            // the previous and next button
+            const previousBtn = document.querySelector('#previous');
+            const nextBtn = document.querySelector('#next');
+
+            // table
+            const baseTB = document.getElementById("calendarTB");
+            // :scope pseudo-class to retrieve all direct children of the calendar
+            let alltd = baseTB.getElementsByTagName("td");  
+
+            // load calendar
+            updateCalendar();
+
+            // change the month when the next or previous btn is pressed 
+            previousBtn.addEventListener('click', function(event){
+                currentMonth = currentMonth.prevMonth();
+                updateCurrentMonth();
+                updateCalendar();
+                // alert('The new month is now ' + currentMonth.month + ' ' + currentMonth.year);
+            },false);
+
+            nextBtn.addEventListener('click', function(event){
+                currentMonth = currentMonth.nextMonth();
+                updateCurrentMonth();
+                updateCalendar();
+                // alert('The new month is now ' + currentMonth.month + ' ' + currentMonth.year);
+            },false);
+
+            function updateCurrentMonth(){
+                let thisMonth = currentMonth.month+1;
+                let thisYear = currentMonth.year;
+
+                curMth.textContent = " "+thisMonth+"/"+thisYear;
+            }
+
+            // use updateCalendar to change the calendar based on the current specified month
+            function updateCalendar(){
+                let weeks = currentMonth.getWeeks();
+                let daysOfMonth = [];
+
+                for (let w in weeks) {
+                    let days = weeks[w].getDates();
+                    // alert("week starting on "+days[0]);
+                    for (let d in days) {
+                        daysOfMonth.push(days[d].getDate());                    
+                    }
+                }
+
+                for (let i = 0; i<alltd.length; i++) {
+                    // console.log(daysOfMonth[i]);
+                    alltd[i].textContent = daysOfMonth[i];
+                }
+            }
+
+            function renderHTML(){
+                // select div.calendar
+                const calendar = document.querySelector(".calendar");
+                // the month calendar
+
+                // prev button & next button
+                const prevButton = document.createElement("button");
+                const nextButton = document.createElement("button");
+
+                // attributes of previous button & next button
+                prevButton.setAttribute("id", "previous");
+                nextButton.setAttribute("id", "next");
+
+                // add buttons into calendar div
+                calendar.appendChild(prevButton);
+                calendar.appendChild(nextButton);
+
+                // button's name
+                prevButton.textContent = "Previous Month";
+                nextButton.textContent = "Next Month";
+
+                // title
+                const title = document.createElement("div");
+
+                // attributes of title
+                title.setAttribute("class", "title");
+
+                // html content: Current Month: mm/yyyy
+                title.innerHTML = "<span id='header'></span>";
+                calendar.appendChild(title);
+
+                // table body
+                const table = document.createElement("div");
+                table.setAttribute("class", "calenderTable");
+                table.innerHTML = "<span>click to add your events</span>";
+
+                // day of week
+                const dayOfweek = "<tr>"+
+                    "<th>Sunday</th>"+
+                    "<th>Monday</th>"+
+                    "<th>Tuesday</th>"+
+                    "<th>Wednesday</th>"+
+                    "<th>Thursday</th>"+
+                    "<th>Friday</th>"+
+                    "<th>Saturday</th>"+
+                    "</tr>";
+                
+                // each day
+                let tbody = "";
+                for (let i=0; i<5; ++i){
+                    tbody += "<tr>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "<td></td>"+
+                        "</tr>";
+                }
+
+                // calendarTB
+                table.innerHTML = "<table id=calendarTB border='1'>"+dayOfweek+tbody+"</table>";
+                calendar.appendChild(table);
+            }
+        }
+
+        /**********************\
+        *                      *
+        * Events Management    *
+        *                      *
+        ***********************/
+
+        // add events: user can click each date to add event
+        function addEvents(event){
+            let day = $(this).text();
+            // events title, Contents, date, time
+            // date: mm/dd/yyyy
+            // time: hh:mm - hh:mm
+            const curMth = document.querySelector("#header").textContent;
+            const _ym = curMth.split("/");
+            const curDate = _ym[0]+'/'+day+'/'+_ym[1];
+
+            renderAddEvent();
+
+            function renderAddEvent(){
+                // generate html div to add events
+                const body = document.querySelector("body");
+
+                const _div = document.createElement("div");
+                _div.setAttribute("class", "divAddEvent");
+                const _ul = document.createElement("ul");
+
+                const _liEvent = document.createElement("li");
+                const _pEvent = document.createElement("p");
+                _pEvent.textContent = "Add Event";
+                _liEvent.appendChild(_pEvent);
+
+                const _liTitle = document.createElement("li");
+                const _spanTitle = document.createElement("span");
+                const _inputTitle = document.createElement("input");
+                _inputTitle.setAttribute("type", "text");
+                _inputTitle.setAttribute("class","addEvent");
+                _inputTitle.setAttribute("name","addTitle");
+                _inputTitle.setAttribute("id","addTitle");
+                _spanTitle.textContent = "Title: ";
+                _liTitle.appendChild(_spanTitle);
+                _liTitle.appendChild(_inputTitle);
+
+                const _liContents = document.createElement("li");
+                const _spanContents = document.createElement("span");
+                const _inputContents = document.createElement("input");
+                _inputContents.setAttribute("type", "text");
+                _inputContents.setAttribute("class","addEvent");
+                _inputContents.setAttribute("name","addContents");
+                _inputContents.setAttribute("id","addContents");
+                _spanContents.textContent = "Contents: ";
+                _liContents.appendChild(_spanContents);
+                _liContents.appendChild(_inputContents);
+
+                const _liDate = document.createElement("li");
+                const _spanDate = document.createElement("span");
+                const _inputDate= document.createElement("input");
+                _inputDate.setAttribute("type", "text");
+                _inputDate.setAttribute("class","addEvent");
+                _inputDate.setAttribute("name","addDate");
+                _inputDate.setAttribute("id","addDate");
+
+                _inputDate.value=curDate;
+
+                _spanDate.textContent = "Date: ";
+                _liDate.appendChild(_spanDate);
+                _liDate.appendChild(_inputDate);
+
+                const _liTime = document.createElement("li");
+                const _spanTime = document.createElement("span");
+                const _inputTime= document.createElement("input");
+                _inputTime.setAttribute("type", "text");
+                _inputTime.setAttribute("class","addEvent");
+                _inputTime.setAttribute("name","addTime");
+                _inputTime.setAttribute("id","addTime");
+                _spanTime.textContent = "Time: ";
+                _liTime.appendChild(_spanTime);
+                _liTime.appendChild(_inputTime);
+
+                const _inputSubmit = document.createElement("input");
+                _inputSubmit.setAttribute("type", "submit");
+                _inputSubmit.setAttribute("class", "addEvent");
+                _inputSubmit.setAttribute("name", "addEvent");
+                _inputSubmit.setAttribute("id", "addEvent");
+                _inputSubmit.setAttribute("value", "Add Events");
+
+                // TODO: cancel events
+                const cancelBnt = document.createElement("button");
+                // <button id='logout'>Log out</button>
+                cancelBnt.setAttribute("id", "cancelEvent");
+                cancelBnt.textContent = "Cancel";
+
+                _ul.appendChild(_liEvent);
+                _ul.appendChild(_liTitle);
+                _ul.appendChild(_liContents)
+                _ul.appendChild(_liDate);
+                _ul.appendChild(_liTime);
+                _ul.appendChild(_inputSubmit);
+                _ul.appendChild(cancelBnt);
+                _div.appendChild(_ul);
+                body.appendChild(_div);
+            }
+
+            // focus on input
+            document.getElementById("addTitle").focus();
+            // click submit to post data
+            document.getElementById("addEvent").addEventListener("click", ajaxAddEvent, false);
+
+            $("#cancelEvent").click(function() {
+                $(".divAddEvent").remove();
+            });
+
+            // post data into server for storing
+            function ajaxAddEvent(event){
+                const titleSele = document.querySelector("#addTitle");
+                const locSele = document.querySelector("#addContents");
+                const dateSele = document.querySelector("#addDate");
+                const timeSele = document.querySelector("#addTime");
+
+                const data = {
+                    "title": titleSele.value,
+                    "Contents": locSele.value,
+                    "date": dateSele.value,
+                    "time": timeSele.value
+                };
+
+                fetch("addEvents.php", {
+                    method: "POST",
+                    body: JSON.stringify(data),
+                    headers: {"content-type": "application/json"}
+                })
+                // response will send a json data to this file
+                .then(response => response.json())
+                // access the json data
+                .then(data => console.log(data.success ? "You've add events!" : `You did not add events ${data.message}`))
+                .catch(err => console.error(err));
+
+                const body = document.querySelector("body");
+                const _div = document.querySelector(".divAddEvent");
+                body.removeChild(_div);
+
+                // mgtEvents();
+            }
+        }
+
+        // TODO: view events & modify & delete
+        // we extract the events associated to user_id and then show on the table
+        function mgtEvents(){
+            // use jQuery ajax 
+            $.ajax({
+                url: "viewEvents.php",
+                type: "POST",
+                dataType: "json",
+            })
+            .done(function(jsonData){
+                if (jsonData.success){
+                    // data: 0:{id:1, title:'hello world', date:'2022-03-01', time:'05:27:00', event_content:" "}
+                    // show red if there is a event in that day
+                    const mgtEvents = $("<div id='mgtEvents'><strong>Manage Events</strong></div>");
+                    
+                    // create ol-list for every events
+                    const olList = $("<ol id='mgtEventsList'></ol>");
+                    for (let i = 0; i < jsonData.data.length; i++){
+                        const _li = $(`<li id='modifyEvent${i}'>Events:</li>`);
+                        _li.append($(`<input id='eventID' type='hidden' value=${jsonData.data[i].id}><br>`));
+                        _li.append($(`<input id='eventTitle' value=${jsonData.data[i].title}><br>`));
+                        _li.append($(`<input id='eventDate' value=${jsonData.data[i].date}><br>`));
+                        _li.append($(`<input id='eventTime' value=${jsonData.data[i].time}><br>`));
+                        _li.append($(`<input id='eventContent' value=${jsonData.data[i].event_content}><br>`));
+                        // change & delete
+                        _li.append($(`<button value='modifyEvent${i}' type='submit' id="changeEvent">Change</button>`));
+                        _li.append($(`<button value='modifyEvent${i}' type='submit' id='deleteEvent'>Delete</button>`));
+                        _li.append($(`<button value='modifyEvent${i}' type='submit' id='tagEvent'>Tag</button>`));
+                        olList.append(_li);
+                    }
+                    olList.append($("<button type='submit' id='cancelEvent'>Cancel</button>"));
+                    mgtEvents.append(olList);
+                    mgtEvents.appendTo("body");
+                    
+                    $("#tagEvent").on("click", tagEvent);
+                    $("#changeEvent").on("click", modifyEvents);
+                    $("#deleteEvent").on("click", deleteEvents);
+                    $("#cancelEvent").on("click", function() {
+                        $("#mgtEvents").remove();                        
+                    });
+
+                    // // change the color of tab with events                 
+
+                    console.log("successful manage events");
+                }
+            })
+            .fail(function(){
+                console.log("Failed to manage events");
+            })
+            .always(function(){
+                console.log("Manage events completed");
+            })
+
+            // TODO: map events into calendar table
+
+        }
+
+        // TODO: modify events
+        function modifyEvents(event) {
+            const selectedID = $(this).val();   
+            const selectedList = document.getElementById(selectedID);
+
+            const eventID = selectedList.querySelector("#eventID");
+            const eventTitle = selectedList.querySelector("#eventTitle");
+            const eventDate = selectedList.querySelector("#eventDate");
+            const eventTime = selectedList.querySelector("#eventTime");
+            const eventContent = selectedList.querySelector("#eventContent");
+
+            const eventData = {"id": eventID.value, 
+                        "title": eventTitle.value, 
+                        "date": eventDate.value, 
+                        "time": eventTime.value,  
+                        "content": eventContent.value};
+
+            $.ajax({
+                url: "modifyEvents.php",
+                type: "POST",
+                data: JSON.stringify(eventData),
+                dataType: "json",
+            })
+            .done(function(jsonData){
+                if (jsonData.success){
+                    console.log("successful modify events");
+                }
+            })
+            .fail(function(){
+                console.log("Failed to modify events");
+            })
+            .always(function(){
+                console.log("modify events completed");
+            })
+            
+        }
+
+        // TODO: delete events
+        function deleteEvents() {
+            const selectedID = $(this).val();   
+            const selectedList = document.getElementById(selectedID);
+            const mgtOl = document.getElementById("mgtEventsList");
+
+            const eventID = selectedList.querySelector("#eventID");
+            const eventTitle = selectedList.querySelector("#eventTitle");
+            const eventDate = selectedList.querySelector("#eventDate");
+            const eventTime = selectedList.querySelector("#eventTime");
+            const eventContent = selectedList.querySelector("#eventContent");
+
+            const eventData = {"id": eventID.value, 
+                        "title": eventTitle.value, 
+                        "date": eventDate.value, 
+                        "time": eventTime.value,  
+                        "content": eventContent.value};
+
+            $.ajax({
+                url: "deleteEvents.php",
+                type: "POST",
+                data: JSON.stringify(eventData),
+                dataType: "json",
+            })
+            .done(function(jsonData){
+                if (jsonData.success){
+                    mgtOl.removeChild(selectedList);
+                    console.log("successful delete events");
+                }
+            })
+            .fail(function(){
+                console.log("Failed to delete events");
+            })
+            .always(function(){
+                console.log("delete events completed");
+            })
+            
+        }
+
+        // TODO: Users can tag an event with a particular category 
+        // and enable/disable those tags in the calendar view
+        function tagEvent(){
+            const tgval = $(this).val();
+            const tagBase = $("<div class='tags'>Choose a tag:</div>");
+            tagBase.append($("<input class='tag' type='radio' name='tag' value='family' id='family' checked><label for='family'>Family</label>"));
+            tagBase.append($("<input class='tag' type='radio' name='tag' value='individual' id='individual'><label for='individual'>Individual</label>"));
+            tagBase.append($("<input class='tag' type='radio' name='tag' value='work' id='work'><label for='work'>Work</label>"));
+            tagBase.append($("<button id='tagSubmit'>Confirm</button>"));
+            tagBase.appendTo("body");
+
+            $("#tagSubmit").click("click", changeColor);
+            function changeColor(event){
+                const checkedTags = document.querySelectorAll(".tag");
+                for (const checkedTag of checkedTags) {
+                    if (checkedTag.checked) {
+                        const choice = checkedTag.value;
+                        $(tgval).prepend(choice);
+                        $(".tags").remove();
+                        break
+                    }
+                }
+
+            }
+
+        }
+
+        // TODO: Users can share their calendar with additional users
+        function shareCalendar(){
+            $("<span class='share-calendar'><input type='text' id='shareWho' name='shareWho' required/><button type='submit' id='shareSubmit'>Confirm</button><span>").appendTo("ul li:first");
+            $('#shareSubmit').on('click', Share);
+            
+            const shareWhoSele = document.querySelector("#shareWho");
+
+            function Share(event){
+                const shareTo = {'username':shareWhoSele.value};
+                $.ajax({
+                    url: "shareCalendar.php",
+                    type: "POST",
+                    data: JSON.stringify(shareTo),
+                    dataType: "json",
+                })
+                .done(function(jsonData){
+                    if (jsonData.success){
+                        $(".share-calendar").remove();
+                        console.log("successful share calendar");
+                    }
+                })
+                .fail(function(){
+                    console.log("Failed to share calendar");
+                })
+                .always(function(){
+                    console.log("Share calendar completed");
+                })
+            }
+
+        }
+
+        // TODO: Users can create group events that display on multiple users calendars
+        function groupEvent(){
+            const baseGrp = $("<div id='grpEvt'>Add a Group Event:</div>");
+            baseGrp.append($("<p>Title: <input type='text' id='grpTitle' required></p>"));
+            baseGrp.append($("<p>Contents: <input type='text' id='grpContents' required></p>"));
+            baseGrp.append($("<p>Date: <input type='text' id='grpDate' required></p>"));
+            baseGrp.append($("<p>Time: <input type='text' id='grpTime' required></p>"));
+            
+            baseGrp.append($("<button type='submit' id='grpAddgrps'>Add Group Members</button>"));
+            baseGrp.append($("<button type='submit' id='grpSubmit'>Submit</button>"));
+            baseGrp.append($("<button type='submit' id='grpCancel'>Cancel</button>"));
+            baseGrp.appendTo("body");
+            $("#grpAddgrps").on('click', function(){
+                $("<input type='text' id='addGrps' required>").appendTo("#grpEvt");
+            });
+
+            // TODO: 
+            $("#grpSubmit").on('click', function(){
+                const title = $("#grpTitle").val();
+                const Contents = $("#grpContents").val();
+                const Date = $("#grpDate").val();
+                const Time = $("#grpTime").val();
+                let grpMembers = document.querySelectorAll("addGrps");
+                let grps = [];
+                for (let grpMem of grpMembers) {
+                    grps.push(grpMem.value);
+                }
+
+                const data = {"title": title, 
+                            "contents": Contents,
+                            "date": Date,
+                            "time": Time,
+                            "grps": grps}
+                
+                $.ajax({
+                    url: "groupEvent.php",
+                    type: "POST",
+                    data: JSON.stringify(data),
+                    dataType: "json",
+                })
+                .done(function(jsonData){
+                    if (jsonData.success){
+                        $("#grpEvt").remove();
+                        console.log("successful create group event");
+                    }
+                })
+                .fail(function(){
+                    console.log("Failed to create group event");
+                })
+                .always(function(){
+                    console.log("Create group event completed");
+                })
+
+            })
+
+            $("#grpCancel").on('click', function(){
+                $("#grpEvt").remove();
+            })
+        }
+
+    </script>
+
+</body>
+</html>

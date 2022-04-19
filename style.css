@@ -1,0 +1,72 @@
+html {
+    font-family: 'PT Sans', sans-serif;
+}
+
+#logout_btn {
+    display: none;
+}
+
+table {
+    background: #fff;
+    border-collapse: collapse;
+    color: #222;
+    font-family: 'PT Sans', sans-serif;
+    font-size: 13px;
+    /* width: 100%; */
+    overflow: hidden;
+    table-layout: auto;
+}
+
+td {
+    border: 1px solid #ccc;
+    color: #444;
+    vertical-align: top;
+}
+
+.open {
+    height: 83px;
+    width: 89.9667px;
+    text-align: left;
+    position: relative;
+    overflow: hidden;
+}
+
+.events {
+    white-space: nowrap;
+}
+
+#event_popup {
+    display: none;
+}
+
+#categories {
+    display: none;
+}
+
+#share {
+    display: none;
+}
+
+.parent{
+    display: flex;
+}
+
+.right{
+    line-height: 3;
+    padding-left: 50px;
+}
+
+textarea { 
+    vertical-align: top; 
+    height: 200px;
+    width: 400px;
+    font-family: 'PT Sans', sans-serif;
+}
+
+#title {
+    width: 200px;
+}
+
+#categories {
+    padding-top: 50px;
+}
